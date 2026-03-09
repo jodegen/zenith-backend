@@ -1,0 +1,360 @@
+openapi: 3.0.3
+info:
+  title: Zenith Expense Tracker API
+  description: Backend API for the Zenith expense tracking platform
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Account
+    description: User account endpoints
+  - name: Expenses
+    description: Expense tracking endpoints
+  - name: Categories
+    description: Category management endpoints
+
+paths:
+  # ── Account ──────────────────────────────────────────────────────────────
+  /account/me:
+    get:
+      tags: [Account]
+      operationId: getMe
+      summary: Get the current user's account
+      responses:
+        "200":
+          description: User account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccountResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Expenses ─────────────────────────────────────────────────────────────
+  /expenses:
+    get:
+      tags: [Expenses]
+      operationId: listExpenses
+      summary: List expenses for the current user (paginated)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Paged list of expenses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedExpenseResponse"
+
+    post:
+      tags: [Expenses]
+      operationId: createExpense
+      summary: Create a new expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseRequest"
+      responses:
+        "201":
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /expenses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Expenses]
+      operationId: getExpenseById
+      summary: Get a single expense by ID
+      responses:
+        "200":
+          description: Expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Expenses]
+      operationId: updateExpense
+      summary: Update an existing expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpenseRequest"
+      responses:
+        "200":
+          description: Expense updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Expenses]
+      operationId: deleteExpense
+      summary: Soft-delete an expense
+      responses:
+        "204":
+          description: Expense deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Categories ───────────────────────────────────────────────────────────
+  /categories:
+    get:
+      tags: [Categories]
+      operationId: listCategories
+      summary: List all categories for the current user
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryResponse"
+
+    post:
+      tags: [Categories]
+      operationId: createCategory
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+# ── Components ──────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+    ValidationError:
+      description: Validation error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+
+  schemas:
+    # ── User Account ────────────────────────────────────────────────────────
+    UserAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, createdAt]
+
+    # ── Expense ─────────────────────────────────────────────────────────────
+    ExpenseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: EUR
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+      required: [id, categoryId, categoryName, amount, currency, date]
+
+    CreateExpenseRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: EUR
+        description:
+          type: string
+          maxLength: 500
+        date:
+          type: string
+          format: date
+      required: [categoryId, amount, currency, date]
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        description:
+          type: string
+          maxLength: 500
+        date:
+          type: string
+          format: date
+
+    PagedExpenseResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+      required: [content, page, size, totalElements, totalPages]
+
+    # ── Category ────────────────────────────────────────────────────────────
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [INCOME, EXPENSE]
+        defaultCategory:
+          type: boolean
+      required: [id, name, type, defaultCategory]
+
+    CreateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          enum: [INCOME, EXPENSE]
+      required: [name, type]
+
+    # ── Problem Detail (RFC 7807) ────────────────────────────────────────────
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+

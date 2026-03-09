@@ -1,0 +1,154 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-user-accounts
+      author: zenith
+      changes:
+        - createTable:
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cognito_sub
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 002-create-categories
+      author: zenith
+      changes:
+        - createTable:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: owner_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_categories_owner
+                    references: user_accounts(id)
+                    deleteCascade: true
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_default
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: categories
+            indexName: idx_categories_owner
+            columns:
+              - column:
+                  name: owner_id
+
+  - changeSet:
+      id: 003-create-expenses
+      author: zenith
+      changes:
+        - createTable:
+            tableName: expenses
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: owner_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_expenses_owner
+                    references: user_accounts(id)
+                    deleteCascade: true
+              - column:
+                  name: category_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_expenses_category
+                    references: categories(id)
+              - column:
+                  name: amount
+                  type: decimal(19,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: char(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(500)
+              - column:
+                  name: date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: expenses
+            indexName: idx_expenses_owner
+            columns:
+              - column:
+                  name: owner_id
+        - createIndex:
+            tableName: expenses
+            indexName: idx_expenses_owner_status
+            columns:
+              - column:
+                  name: owner_id
+              - column:
+                  name: status
+        - createIndex:
+            tableName: expenses
+            indexName: idx_expenses_date
+            columns:
+              - column:
+                  name: owner_id
+              - column:
+                  name: date
+                  descending: true
+
